@@ -22,7 +22,7 @@ ax = plt.axes(projection=ccrs.PlateCarree())
 ax.set_extent([lons.min(), lons.max(), lats.min(), lats.max()], crs=ccrs.PlateCarree())
 ax.add_feature(cfeature.COASTLINE)
 ax.add_feature(cfeature.BORDERS, linestyle=':')
-
+ 
 # Create heatmap
 mesh = plt.pcolormesh(lons, lats, day_data, cmap='jet', shading='auto', transform=ccrs.PlateCarree())
 plt.colorbar(mesh, label="Average Temperature (°C)")
