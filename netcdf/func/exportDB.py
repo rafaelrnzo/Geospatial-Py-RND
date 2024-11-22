@@ -1,86 +1,44 @@
-import psycopg2
-import csv
-from datetime import datetime
+import pandas as pd
+from pymongo import MongoClient
 
-def convert_csv_to_postgres(csv_file, db_config, table_name):
+def convert_csv_to_mongo(csv_file, mongo_uri, db_name, collection_name):
     """
-    Converts data from a CSV file into PostgreSQL.
+    Converts data from a CSV file into MongoDB.
 
     Parameters:
     - csv_file: Path to the CSV file.
-    - db_config: Dictionary containing PostgreSQL connection parameters.
-    - table_name: PostgreSQL table name.
+    - mongo_uri: MongoDB connection URI.
+    - db_name: MongoDB database name.
+    - collection_name: MongoDB collection name.
     """
-    conn = None
-    cursor = None
     try:
-        # Connect to PostgreSQL
-        conn = psycopg2.connect(
-            host=db_config['host'],
-            port=db_config['port'],
-            database=db_config['database'],
-            user=db_config['user'],
-            password=db_config['password']
-        )
-        cursor = conn.cursor()
+        # Read the CSV file
+        df = pd.read_csv(csv_file)
 
-        # Create table if it doesn't exist
-        cursor.execute(f"""
-        CREATE TABLE IF NOT EXISTS {table_name} (
-            id SERIAL PRIMARY KEY,
-            time TIMESTAMP,
-            latitude DOUBLE PRECISION,
-            longitude DOUBLE PRECISION,
-            temperature DOUBLE PRECISION
-        );
-        """)
+        # Convert DataFrame to list of dictionaries for MongoDB
+        records = df.to_dict(orient='records')
 
-        # Read data from the CSV file
-        with open(csv_file, mode='r') as file:
-            reader = csv.DictReader(file)
-            records = []
-            for row in reader:
-                try:
-                    # Parse the date string into a datetime object
-                    time = datetime.strptime(row['time'], '%Y-%m-%d')
-                    latitude = float(row['latitude'])
-                    longitude = float(row['longitude'])
-                    # Handle missing temperature values
-                    temperature = float(row['temperature']) if row['temperature'] else None
+        # Connect to MongoDB
+        client = MongoClient(mongo_uri)
+        db = client[db_name]
+        collection = db[collection_name]
 
-                    records.append((time, latitude, longitude, temperature))
-                except Exception as e:
-                    print(f"Skipping row due to error: {e}")
-
-        # Batch insert records into PostgreSQL
+        # Insert records into MongoDB
         if records:
-            query = f"""
-            INSERT INTO {table_name} (time, latitude, longitude, temperature)
-            VALUES (%s, %s, %s, %s)
-            """
-            cursor.executemany(query, records)
-            conn.commit()
-            print(f"Inserted {len(records)} records into PostgreSQL table '{table_name}'.")
+            collection.insert_many(records)
+            print(f"Inserted {len(records)} records into MongoDB.")
         else:
             print("No records to insert.")
 
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
-        if cursor is not None:
-            cursor.close()
-        if conn is not None:
-            conn.close()
+        client.close()
 
-# PostgreSQL configuration
-db_config = {
-    'host': 'localhost',
-    'port': '5432',
-    'database': 'postgres',
-    'user': 'postgres',
-    'password': 'Falah0918'
-}
+# Parameters
 csv_file_path = r'C:\Users\SD-LORENZO-PC\pyproject\rndPy\Geospatial\netcdf\data\data.csv'
-table_name = 'temperature_data'
+mongo_uri = "mongodb+srv://devadmin:2553669874123654@dev218.kke0v.mongodb.net/?retryWrites=true&w=majority&appName=dev218"
+database_name = "climate_data"
+collection_name = "temperature_data"
 
-convert_csv_to_postgres(csv_file_path, db_config, table_name)
+convert_csv_to_mongo(csv_file_path, mongo_uri, database_name, collection_name)
