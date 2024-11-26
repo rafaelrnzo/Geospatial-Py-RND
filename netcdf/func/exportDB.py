@@ -12,18 +12,13 @@ def convert_csv_to_mongo(csv_file, mongo_uri, db_name, collection_name):
     - collection_name: MongoDB collection name.
     """
     try:
-        # Read the CSV file
         df = pd.read_csv(csv_file)
-
-        # Convert DataFrame to list of dictionaries for MongoDB
         records = df.to_dict(orient='records')
 
-        # Connect to MongoDB
         client = MongoClient(mongo_uri)
         db = client[db_name]
         collection = db[collection_name]
 
-        # Insert records into MongoDB
         if records:
             collection.insert_many(records)
             print(f"Inserted {len(records)} records into MongoDB.")
